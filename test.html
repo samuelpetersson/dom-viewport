@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<script src="index.js"></script>
+
+	<style>
+		body {
+			margin: 0;
+		}
+
+		div {
+			width: 100%;
+			height: 400px;
+			background-color: #f09;
+		}
+		div + div {
+			margin-top: 10px;
+		}
+
+		div.active {
+			background-color: #090;
+		}
+	</style>
+</head>
+<body>
+	
+	<script>
+
+		var delegate = {
+			regionResize:function(region) {
+			//	region.element.innerHTML = "resize ("+region.bounds.width+", "+region.bounds.height+")";
+			},
+			regionShow:function(region) {
+				region.element.className = "active";
+			},
+			regionHide:function(region) {
+				region.element.className = "";
+			}
+		};
+
+
+		for (var i = 0; i < 10; i++) {
+			var box = document.createElement("div");
+			document.body.appendChild(box);
+			var region = viewport.createRegion(delegate, box, {y:50, height:-100});
+			if(region.visible) {
+				delegate.regionShow(region);
+			}
+		}
+
+		viewport.createRegion({
+			regionResize:function(region) {
+			//	console.log("window resize", region.bounds);
+			},
+			regionScroll:function(region) {
+				//console.log("window scroll", region.bounds);
+			}
+		}, window);
+	
+		viewport.createRegion({
+			regionScroll:function(region) {
+				//console.log("document scroll", region.bounds);
+			}
+		}, document);
+
+	</script>	
+</body>
+</html>

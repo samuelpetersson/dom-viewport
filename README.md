@@ -3,5 +3,5 @@
 ## Example
 
 ```js
-viewport.createRegion(delegate, element);
+viewport.createRegion(delegate, element, offset);
 ```

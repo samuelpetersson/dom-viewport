@@ -1,106 +1,133 @@
-function Viewport() {
-	this.regions = [];
-	this.update();
+var viewport = (function(){
+	var self = {};
 
-	var self = this;
+	var elementRect = function(element, offset) {
+		var x = 0, y = 0, w, h;
+		if(element === window) {
+			w = self.width;
+			h = self.height;
+		}
+		else {
+			if(element === document) {
+				element = document.body;
+			}
+			var bounds = element.getBoundingClientRect();
+			x = bounds.left;
+			y = bounds.top;
+			w = element.clientWidth;
+			h = element.clientHeight;
+		}
+		if(offset) {
+			x += offset.x || 0;
+			y += offset.y || 0;
+			w += offset.width || 0;
+			h += offset.height || 0;
+		}
+		return {x:x, y:y, width:w, height:h};
+	};
 
-	this.handler = function() {
-		self.update();
-		self.layout();
+	var intersects = function(rect) {
+		if(rect.x > self.width) {
+			return false;
+		}
+		if(rect.x + rect.width < 0) {
+			return false;
+		}
+		if(rect.y > self.height) {
+			return false;
+		}
+		if(rect.y + rect.height < 0) {
+			return false;
+		}
+		return true;
+	};
+
+	var regions = [];
+
+	var update = function(){
+		var w = window, d = document, e = d.documentElement, b = d.body;
+		self.x = w.pageXOffset || e && e.scrollLeft || b && b.scrollLeft || 0;
+		self.y = w.pageYOffset || e && e.scrollTop || b && b.scrollTop || 0;
+		self.width = w.innerWidth || e && e.clientWidth || b && b.clientWidth;
+		self.height = w.innerHeight || e && e.clientHeight || b && b.clientHeight;
+
+		var length = regions.length, i = 0, region;
+		while(i < length) {
+			region = regions[i];
+			if(region.disposed) {
+				regions.splice(i, 1);
+				length--;
+			}
+			else {
+				region.validate();
+				i++;
+			}
+		}
 	};
 
 	if(window.addEventListener) {
-		window.addEventListener("scroll", this.handler);
-		window.addEventListener("resize", this.handler);
+		window.addEventListener("scroll", update);
+		window.addEventListener("resize", update);
 	}
 	else if(window.attachEvent) {
-		window.attachEvent("onscroll", this.handler);
-		window.attachEvent("onresize", this.handler);
+		window.attachEvent("onscroll", update);
+		window.attachEvent("onresize", update);
 	}
-}
 
-Viewport.prototype.createRegion = function(delegate, element){
-	var region = {delegate:delegate, element:element};
-	region.bounds = this.elementRect(region.element);
-	region.visible = this.contains(region.bounds);
-	this.regions.push(region);
-	return region;
-};
+	update();
 
-Viewport.prototype.notifyRegion = function(region, event) {
-	var scope = region.delegate;
-	if(scope[event]) {
-		scope[event](region);
+	function Region(delegate, element, offset) {
+		this.delegate = delegate;
+		this.element = element;
+		this.offset = offset;
+		this.bounds = elementRect(this.element, this.offset);
+		this.visible = this.bounds.width > 0 && this.bounds.height > 0 && intersects(this.bounds);
 	}
-};
 
-Viewport.prototype.update = function() {
-	var w = window, d = document, e = d.documentElement, b = d.body;
-	this.x = w.pageXOffset || e && e.scrollLeft || b && b.scrollLeft || 0;
-	this.y = w.pageYOffset || e && e.scrollTop || b && b.scrollTop || 0;
-	this.width = w.innerWidth || e && e.clientWidth || b && b.clientWidth;
-	this.height = w.innerHeight || e && e.clientHeight || b && b.clientHeight;
-};
+	Region.prototype.validate = function() {
+		var oldRect = this.bounds;
+		var oldVisible = this.visible;
+		var newRect = elementRect(this.element, this.offset);
+		var newVisible = newRect.width > 0 && newRect.height > 0 && intersects(newRect);
+		this.visible = newVisible;
+		this.bounds = newRect;
 
-Viewport.prototype.layout = function() {
-	var regions = this.regions, length = regions.length, i = 0, region;
-
-	while(i < length) {
-		region = regions[i];
-		if(region.disposed) {
-			regions.splice(i, 1);
-			length--;
+		if(newVisible) {
+			if(!oldVisible) {
+				this.notify("regionShow");
+			}
+			if(newRect.x !== oldRect.x || newRect.y !== oldRect.y) {
+				this.notify("regionScroll");
+			}
+			if(newRect.width !== oldRect.width || newRect.height !== oldRect.height) {
+				this.notify("regionResize");
+			}
 		}
 		else {
-			var oldRect = region.bounds;
-			var oldVisible = region.visible;
-			var newRect = this.elementRect(region.element);
-			var newVisible = this.contains(newRect);
-			region.visible = newVisible;
-			region.bounds = newRect;
-
-			if(newVisible) {
-				if(!oldVisible) {
-					this.notifyRegion(region, "regionDidShow");
-				}
-				if(newRect.x !== oldRect.x || newRect.y !== oldRect.y) {
-					this.notifyRegion(region, "regionDidScroll");
-				}
-				if(newRect.width !== oldRect.width || newRect.height !== oldRect.height) {
-					this.notifyRegion(region, "regionDidResize");
-				}
+			if(oldVisible) {
+				this.notify("regionHide");
 			}
-			else {
-				if(oldVisible) {
-					this.notifyRegion(region, "regionDidHide");
-				}
-			}
-			i++;
 		}
-	}
-};
+	};
 
-Viewport.prototype.contains = function(rect) {
-	if(rect.x > this.width) {
-		return false;
-	}
-	if(rect.x + rect.width < 0) {
-		return false;
-	}
-	if(rect.y > this.height) {
-		return false;
-	}
-	if(rect.y + rect.height < 0) {
-		return false;
-	}
-	return true;
-};
+	Region.prototype.notify = function(event) {
+		var scope = this.delegate;
+		if(scope[event]) {
+			scope[event](this);
+		}
+	};
 
-Viewport.prototype.elementRect = function(element, inset) {
-	var bounds = element.getBoundingClientRect();
-	return {x:bounds.left, y:bounds.top, width:element.clientWidth, height:element.clientHeight};
-};
+	self.intersects = intersects;
+	self.elementRect = elementRect;
+	self.createRegion = function(delegate, element, visibileWithoutSize) {
+		var region = new Region(delegate, element, visibileWithoutSize);
+		regions.push(region);
+		return region;
+	};
 
-if(module) {
-	module.exports = new Viewport();
+	return self;
+})();
+
+if(typeof module !== "undefined") {
+	module.exports = viewport;
 }
