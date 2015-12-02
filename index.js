@@ -119,8 +119,8 @@ var viewport = (function(){
 
 	self.intersects = intersects;
 	self.elementRect = elementRect;
-	self.createRegion = function(delegate, element, visibileWithoutSize) {
-		var region = new Region(delegate, element, visibileWithoutSize);
+	self.createRegion = function(delegate, element, offset) {
+		var region = new Region(delegate, element, offset);
 		regions.push(region);
 		return region;
 	};
