@@ -1,6 +1,6 @@
 {
   "name": "dom-viewport",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Measure and notify element regions",
   "main": "index.js",
   "scripts": {
