@@ -30,10 +30,10 @@ var delegate = {
 		//Element is hidden
 	},
 	regionScroll:function(region){
-		//Wiewport scrolled and element has new position
+		//Viewport scrolled and element has new position
 	},
 	regionResize:function(region){
-		//Wiewport resized and element has new size
+		//Viewport resized and element has new size
 	}
 };
 //Create a new region for element
