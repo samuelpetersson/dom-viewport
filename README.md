@@ -24,7 +24,7 @@ region.visible;
 region.bounds;
 
 //Dispose and stop Observe region.
-region.dipose();
+region.dispose();
 ```
 
 ### Examples
