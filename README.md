@@ -23,14 +23,14 @@ region.visible;
 //Get region bounds rect.
 region.bounds;
 
-//Dipose and stop Observe region.
+//Dispose and stop Observe region.
 region.dipose();
 ```
 
 ### Examples
 
 ```javascript
-//Implement the delegate with visibillity, position and size.
+//Implement the delegate with visibility, position and size.
 var delegate = {
 	regionShow:function(region){
 		//Element is visible.
