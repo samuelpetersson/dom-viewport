@@ -1,42 +1,62 @@
 var viewport = (function(){
 	var self = {};
 
-	var elementRect = function(element, offset) {
-		var x = 0, y = 0, w, h;
+	var elementRect = function(element, result) {
+		result = result || {};
+
 		if(element === window) {
-			w = self.width;
-			h = self.height;
+			result.x = 0;
+			result.y = 0;
+			result.w = self.width;
+			result.h = self.height;
+			return result;
 		}
-		else {
-			if(element === document) {
-				element = document.body;
-			}
-			var bounds = element.getBoundingClientRect();
-			x = bounds.left;
-			y = bounds.top;
-			w = element.clientWidth;
-			h = element.clientHeight;
+
+		if(element === document) {
+			element = document.body;
 		}
-		if(offset) {
-			x += offset.x || 0;
-			y += offset.y || 0;
-			w += offset.width || 0;
-			h += offset.height || 0;
+
+		if(element === document.body) {
+			result.x = -self.x;
+			result.y = -self.y;
+			result.width = element.scrollWidth;
+			result.height = element.scrollHeight;
+			return result;
 		}
-		return {x:x, y:y, width:w, height:h};
+
+		var bounds = element.getBoundingClientRect();
+
+		result.x = bounds.left;
+		result.y = bounds.top;
+		result.width = element.offsetWidth;
+		result.height = element.offsetHeight;
+
+		return result;
 	};
 
-	var intersects = function(rect) {
-		if(rect.x > self.width) {
+	var intersects = function(rect, inset) {
+		var left = rect.x;
+		var right = left + rect.width;
+		var top = rect.y;
+		var bottom = top + rect.height;
+		
+		if(inset) {
+			left += inset.left || 0;
+			right -= inset.right || 0;
+			top += inset.top || 0;
+			bottom -= inset.bottom || 0;
+		}
+
+		if(left >= self.width) {
 			return false;
 		}
-		if(rect.x + rect.width < 0) {
+		if(right <= 0) {
 			return false;
 		}
-		if(rect.y > self.height) {
+		if(top >= self.height) {
 			return false;
 		}
-		if(rect.y + rect.height < 0) {
+		if(bottom <= 0) {
 			return false;
 		}
 		return true;
@@ -76,51 +96,49 @@ var viewport = (function(){
 
 	update();
 
-	function Region(delegate, element, offset) {
+	function Region(delegate, element, inset) {
 		this.delegate = delegate;
 		this.element = element;
-		this.offset = offset;
-		this.bounds = elementRect(this.element, this.offset);
-		this.visible = this.bounds.width > 0 && this.bounds.height > 0 && intersects(this.bounds);
+		this.inset = inset;
+		this.bounds = elementRect(this.element);
+		this.visible = this.bounds.width > 0 && this.bounds.height > 0 && intersects(this.bounds, inset);
 	}
 
 	Region.prototype.validate = function() {
-		var oldRect = this.bounds;
+		var bounds = this.bounds, oldX = bounds.x, oldY = bounds.y, oldWidth = bounds.width, oldHeight = bounds.height;
+		elementRect(this.element, bounds);
+
 		var oldVisible = this.visible;
-		var newRect = elementRect(this.element, this.offset);
-		var newVisible = newRect.width > 0 && newRect.height > 0 && intersects(newRect);
+		var newVisible = bounds.width > 0 && bounds.height > 0 && intersects(bounds, this.inset);
 		this.visible = newVisible;
-		this.bounds = newRect;
+		
+		var delegate = this.delegate;
 
 		if(newVisible) {
-			if(!oldVisible) {
-				this.notify("regionShow");
+			if(delegate.regionShow && !oldVisible) {
+				delegate.regionShow(this);
 			}
-			if(newRect.x !== oldRect.x || newRect.y !== oldRect.y) {
-				this.notify("regionScroll");
+			if(delegate.regionScroll && (bounds.x !== oldX || bounds.y !== oldY)) {
+				delegate.regionScroll(this);
 			}
-			if(newRect.width !== oldRect.width || newRect.height !== oldRect.height) {
-				this.notify("regionResize");
+			if(delegate.regionResize && (bounds.width !== oldWidth || bounds.height !== oldHeight)) {
+				delegate.regionResize(this);
 			}
 		}
 		else {
-			if(oldVisible) {
-				this.notify("regionHide");
+			if(delegate.regionHide && oldVisible) {
+				delegate.regionHide(this);
 			}
 		}
 	};
-
-	Region.prototype.notify = function(event) {
-		var scope = this.delegate;
-		if(scope[event]) {
-			scope[event](this);
-		}
+	Region.prototype.dispose = function() {
+		this.disposed = true;
 	};
 
 	self.intersects = intersects;
 	self.elementRect = elementRect;
-	self.createRegion = function(delegate, element, offset) {
-		var region = new Region(delegate, element, offset);
+	self.createRegion = function(delegate, element, inset) {
+		var region = new Region(delegate, element, inset);
 		regions.push(region);
 		return region;
 	};

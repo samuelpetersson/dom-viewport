@@ -5,64 +5,132 @@
 	<script src="index.js"></script>
 
 	<style>
-		body {
+		html, body {
 			margin: 0;
+			height: 100%;
+			position: relative;
 		}
 
-		div {
-			width: 100%;
-			height: 400px;
-			background-color: #f09;
-		}
-		div + div {
-			margin-top: 10px;
+		.grid {
+			width: 200%;
+			height: 200%;
 		}
 
-		div.active {
-			background-color: #090;
+		.cell {
+			float: left;
+			width: 10%;
+			height: 10%;
+			padding: 20px;
+			position: relative;
+			text-align: center;
+			box-sizing: border-box;
+		}	
+		.cell:before {
+			content: "";
+			position: absolute;
+			display: block;
+			z-index: -1;
+			left:1px;
+			right:1px;
+			top:1px;
+			bottom:1px;
+			background: #DDD;
+
 		}
+		.cell.active:before {
+			background: #CFC;			
+		}
+	
+		.frame {
+			position: fixed;
+
+			top:0;
+			bottom:0;
+			left:0;
+			right:0;
+
+			color: red;
+			
+		}
+		.frame:after {
+			content: "";
+			display: block;
+			position: absolute;
+			top:100px;
+			bottom:100px;
+			left:100px;
+			right:100px;
+			border: 1px solid #F00;
+
+		}
+
+
 	</style>
 </head>
 <body>
+
+	
 	
 	<script>
 
-		var delegate = {
-			regionResize:function(region) {
-			//	region.element.innerHTML = "resize ("+region.bounds.width+", "+region.bounds.height+")";
-			},
+
+
+		var regionInfo = function(region) {
+			return "Region (x:"+region.bounds.x+", y:"+region.bounds.y+", width:"+region.bounds.width+", height:"+region.bounds.height+")";
+		};
+
+		var updateCellInfo = function(region) {
+			region.element.innerHTML = regionInfo(region);
+		};
+
+		var cellDelegate = {
+			regionResize: updateCellInfo,
+			regionScroll: updateCellInfo,
 			regionShow:function(region) {
-				region.element.className = "active";
+				region.element.className = "cell active";
 			},
 			regionHide:function(region) {
-				region.element.className = "";
+				region.element.className = "cell";
+				region.element.innerHTML = "";
 			}
 		};
 
+		
 
-		for (var i = 0; i < 10; i++) {
-			var box = document.createElement("div");
-			document.body.appendChild(box);
-			var region = viewport.createRegion(delegate, box, {y:50, height:-100});
+		var grid = document.createElement("div");
+		grid.className = "grid";
+		document.body.appendChild(grid);
+
+		for (var i = 0; i < 100; i++) {
+			var cell = document.createElement("div");
+			cell.className = "cell";
+			grid.appendChild(cell);
+			
+			var region = viewport.createRegion(cellDelegate, cell, {left:100, top:100, right:100, bottom:100});
+			
 			if(region.visible) {
-				delegate.regionShow(region);
+				cellDelegate.regionShow(region);
+				updateCellInfo(region);
 			}
 		}
 
+		
+		var frame = document.createElement("div");
+		frame.className = "frame";
+
+		document.body.appendChild(frame);
+
+		
 		viewport.createRegion({
 			regionResize:function(region) {
-			//	console.log("window resize", region.bounds);
+				frame.innerHTML = regionInfo(region);
 			},
 			regionScroll:function(region) {
-				//console.log("window scroll", region.bounds);
-			}
-		}, window);
-	
-		viewport.createRegion({
-			regionScroll:function(region) {
-				//console.log("document scroll", region.bounds);
+				frame.innerHTML = regionInfo(region);
 			}
 		}, document);
+		
+		
 
 	</script>	
 </body>
